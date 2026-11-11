@@ -4,6 +4,10 @@
 
 A tiny Windows 10/11 system tray app that removes the arrow overlay from shortcut icons.
 
+![Desktop shortcuts before and after Arrowless](docs/before-after.png)
+
+<p align="center"><img src="docs/menu.png" alt="Arrowless tray menu"></p>
+
 ## Installation (users)
 
 1. Go to the **Releases** section of this repository and download `Arrowless-win-x64.zip`.
