@@ -1,55 +1,28 @@
-# Generates src/Arrowless/Assets/app.ico (original icon: a crossed-out arrow).
-# Usage: powershell -ExecutionPolicy Bypass -File tools/make-icon.ps1 [-Preview path.png]
+# Builds src/Arrowless/Assets/app.ico from docs/icon.png (transparent PNG, ideally 1024x1024).
+# Usage: powershell -ExecutionPolicy Bypass -File tools/make-icon.ps1
 param(
-    [string]$Out = (Join-Path $PSScriptRoot '..\src\Arrowless\Assets\app.ico'),
-    [string]$Preview
+    [string]$Source = (Join-Path $PSScriptRoot '..\docs\icon.png'),
+    [string]$IcoPath = (Join-Path $PSScriptRoot '..\src\Arrowless\Assets\app.ico')
 )
 
 Add-Type -AssemblyName System.Drawing
 
-function New-Frame([int]$s) {
-    $bmp = New-Object System.Drawing.Bitmap $s, $s, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
-    $g = [System.Drawing.Graphics]::FromImage($bmp)
-    $g.SmoothingMode = 'AntiAlias'
-    $g.PixelOffsetMode = 'HighQuality'
-    $g.Clear([System.Drawing.Color]::Transparent)
-
-    # Background: rounded square with an indigo -> violet gradient
-    $m = [single]($s * 0.04); $w = [single]($s * 0.92); $d = [single]($s * 0.40)
-    $path = New-Object System.Drawing.Drawing2D.GraphicsPath
-    $path.AddArc($m, $m, $d, $d, 180, 90)
-    $path.AddArc($m + $w - $d, $m, $d, $d, 270, 90)
-    $path.AddArc($m + $w - $d, $m + $w - $d, $d, $d, 0, 90)
-    $path.AddArc($m, $m + $w - $d, $d, $d, 90, 90)
-    $path.CloseFigure()
-    $rect = New-Object System.Drawing.RectangleF $m, $m, $w, $w
-    $c1 = [System.Drawing.Color]::FromArgb(255, 79, 70, 229)
-    $c2 = [System.Drawing.Color]::FromArgb(255, 124, 58, 237)
-    $bg = New-Object System.Drawing.Drawing2D.LinearGradientBrush $rect, $c1, $c2, 45.0
-    $g.FillPath($bg, $path)
-
-    function P([double]$x, [double]$y) { New-Object System.Drawing.PointF ([single]($x * $s)), ([single]($y * $s)) }
-
-    # White arrow (pointing up and to the right)
-    $white = [System.Drawing.Color]::White
-    $pen = New-Object System.Drawing.Pen $white, ([single]($s * 0.11))
-    $pen.StartCap = 'Round'; $pen.EndCap = 'Flat'
-    $g.DrawLine($pen, (P 0.28 0.72), (P 0.62 0.38))
-    $head = [System.Drawing.PointF[]]@((P 0.76 0.24), (P 0.50 0.26), (P 0.74 0.50))
-    $g.FillPolygon((New-Object System.Drawing.SolidBrush $white), $head)
-
-    # Coral diagonal slash with a dark outline so it stays readable at small sizes
-    $dark = [System.Drawing.Color]::FromArgb(255, 49, 46, 129)
-    $coral = [System.Drawing.Color]::FromArgb(255, 255, 90, 95)
-    $outline = New-Object System.Drawing.Pen $dark, ([single]($s * 0.16))
-    $outline.StartCap = 'Round'; $outline.EndCap = 'Round'
-    $g.DrawLine($outline, (P 0.20 0.20), (P 0.80 0.80))
-    $slash = New-Object System.Drawing.Pen $coral, ([single]($s * 0.09))
-    $slash.StartCap = 'Round'; $slash.EndCap = 'Round'
-    $g.DrawLine($slash, (P 0.20 0.20), (P 0.80 0.80))
-
-    $g.Dispose()
-    return $bmp
+function Resize-Image([System.Drawing.Image]$img, [int]$size) {
+    # Halve repeatedly while the image is much bigger than the target (avoids aliasing), then final resize.
+    $cur = New-Object System.Drawing.Bitmap $img
+    while ($cur.Width / 2 -ge $size) {
+        $half = New-Object System.Drawing.Bitmap ([int]($cur.Width / 2)), ([int]($cur.Height / 2)), ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+        $g = [System.Drawing.Graphics]::FromImage($half)
+        $g.InterpolationMode = 'HighQualityBicubic'; $g.PixelOffsetMode = 'HighQuality'; $g.CompositingMode = 'SourceCopy'
+        $g.DrawImage($cur, 0, 0, $half.Width, $half.Height)
+        $g.Dispose(); $cur.Dispose(); $cur = $half
+    }
+    $final = New-Object System.Drawing.Bitmap $size, $size, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    $g = [System.Drawing.Graphics]::FromImage($final)
+    $g.InterpolationMode = 'HighQualityBicubic'; $g.PixelOffsetMode = 'HighQuality'; $g.CompositingMode = 'SourceCopy'
+    $g.DrawImage($cur, 0, 0, $size, $size)
+    $g.Dispose(); $cur.Dispose()
+    return $final
 }
 
 function ConvertTo-PngBytes($bmp) {
@@ -58,15 +31,13 @@ function ConvertTo-PngBytes($bmp) {
     return , $ms.ToArray()
 }
 
+$srcImg = [System.Drawing.Image]::FromFile((Resolve-Path $Source))
 $sizes = 16, 24, 32, 48, 64, 128, 256
-$pngs = foreach ($s in $sizes) { $b = New-Frame $s; , (ConvertTo-PngBytes $b); $b.Dispose() }
+$pngs = foreach ($s in $sizes) { $b = Resize-Image $srcImg $s; , (ConvertTo-PngBytes $b); $b.Dispose() }
+$srcImg.Dispose()
 
-if ($Preview) {
-    $b = New-Frame 256; $b.Save($Preview, [System.Drawing.Imaging.ImageFormat]::Png); $b.Dispose()
-}
-
-New-Item -ItemType Directory -Force -Path (Split-Path $Out) | Out-Null
-$fs = [System.IO.File]::Create($Out)
+New-Item -ItemType Directory -Force -Path (Split-Path $IcoPath) | Out-Null
+$fs = [System.IO.File]::Create($IcoPath)
 $bw = New-Object System.IO.BinaryWriter $fs
 $bw.Write([uint16]0); $bw.Write([uint16]1); $bw.Write([uint16]$sizes.Count)
 $offset = 6 + 16 * $sizes.Count
