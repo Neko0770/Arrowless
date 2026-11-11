@@ -1,0 +1,13 @@
+bin/
+obj/
+.vs/
+.idea/
+*.user
+*.suo
+publish/
+artifacts/
+*.pfx
+*.snk
+
+# Raw screenshots: review them before publishing (may show personal info)
+docs/Screenshot*

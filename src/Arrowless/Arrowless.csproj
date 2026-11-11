@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Arrowless</AssemblyName>
+    <RootNamespace>Arrowless</RootNamespace>
+    <Version>1.0.0</Version>
+    <!-- Publishing: a single self-contained exe, no .NET installation required -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType>none</DebugType>
+    <!-- Keeps local build paths out of the binaries. -->
+    <Deterministic>true</Deterministic>
+    <PathMap>$(MSBuildProjectDirectory)=/src/Arrowless</PathMap>
+    <!-- Exe icon and generic metadata -->
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <Product>Arrowless</Product>
+    <Description>System tray app that hides the shortcut arrow overlay on Windows.</Description>
+    <Copyright>Copyright (c) 2026 Arrowless contributors. MIT License.</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\app.ico" LogicalName="app.ico" />
+  </ItemGroup>
+
+</Project>
